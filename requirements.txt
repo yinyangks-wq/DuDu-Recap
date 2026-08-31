@@ -4,3 +4,5 @@ gTTS
 edge-tts
 youtube-transcript-api
 yt-dlp
+openai-whisper
+torch
