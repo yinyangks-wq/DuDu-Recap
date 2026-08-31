@@ -1,3 +1,6 @@
 streamlit
-gTTS
 deep-translator
+gTTS
+edge-tts
+openai-whisper
+asyncio
