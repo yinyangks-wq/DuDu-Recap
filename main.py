@@ -4,34 +4,91 @@ import streamlit as st
 from deep_translator import GoogleTranslator
 from gtts import gTTS
 import edge_tts
+from youtube_transcript_api import YouTubeTranscriptApi
 
 st.set_page_config(page_title="Movie Recap Studio Pro", page_icon="🎬", layout="wide")
 
 st.title("🎬 Movie Recap Studio Pro")
-st.write("Recap Script များ ဘာသာပြန်ခြင်း၊ AI Voiceover ထုတ်ယူခြင်းနှင့် Transcript/SRT Subtitle ဖိုင်များ ဖန်တီးပေးသည့် Studio ဖြစ်ပါသည်။")
+st.write("YouTube Video မှ Transcript ထုတ်ယူ ဘာသာပြန်ခြင်း၊ Text to Voiceover ပြုလုပ်ခြင်းနှင့် SRT Subtitle ဖန်တီးပေးသည့် Studio ဖြစ်ပါသည်။")
 
-tab1, tab2 = st.tabs(["📝 Text to Voice & SRT", "🎙️ Audio/Video Transcript"])
+tab1, tab2 = st.tabs(["🔴 YouTube Transcript & Translator", "📝 Text to Voice & SRT"])
 
-# TAB 1: Text Processing, Translation, Voice & SRT
+# FUNCTION: Extract YouTube Video ID
+def get_youtube_id(url):
+    if "v=" in url:
+        return url.split("v=")[1].split("&")[0]
+    elif "youtu.be/" in url:
+        return url.split("youtu.be/")[1].split("?")[0]
+    return url
+
+# TAB 1: YouTube Link to Transcript & Translation
 with tab1:
-    st.subheader("1. Script & Translation")
+    st.subheader("🔴 Extract & Translate YouTube Transcript")
+    yt_url = st.text_input("YouTube Video Link ကို ထည့်ပါ-", placeholder="https://www.youtube.com/watch?ve=example")
+    yt_lang = st.selectbox("Translate To", ["my", "en"], format_func=lambda x: "Myanmar" if x == "my" else "English")
+
+    if st.button("🚀 Fetch & Translate Transcript", type="primary"):
+        if not yt_url.strip():
+            st.warning("⚠️ YouTube Link အရင်ထည့်ပါ။")
+        else:
+            with st.spinner("YouTube ထံမှ စာတန်းထိုးများကို ဆွဲထုတ်ပြီး ဘာသာပြန်ဆိုနေပါသည်..."):
+                try:
+                    video_id = get_youtube_id(yt_url)
+                    
+                    # Fetching transcript
+                    transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+                    full_text = " ".join([item['text'] for item in transcript_list])
+                    
+                    st.success("✅ Transcript အောင်မြင်စွာ ရရှိပါပြီ။")
+                    
+                    col_left, col_right = st.columns(2)
+                    
+                    with col_left:
+                        st.subheader("📄 Original Transcript")
+                        st.text_area("မူရင်း စာသားများ:", full_text, height=250)
+                    
+                    # Translation
+                    translated_text = GoogleTranslator(source='auto', target=yt_lang).translate(full_text)
+                    
+                    with col_right:
+                        st.subheader("🌐 Translated Transcript")
+                        st.text_area("ဘာသာပြန် စာသားများ:", translated_text, height=250)
+
+                    # SRT Generator Logic
+                    srt_content = ""
+                    for idx, item in enumerate(transcript_list, 1):
+                        start = item['start']
+                        duration = item['duration']
+                        end = start + duration
+                        
+                        start_str = f"{int(start//3600):02d}:{int((start%3600)//60):02d}:{int(start%60):02d},000"
+                        end_str = f"{int(end//3600):02d}:{int((end%3600)//60):02d}:{int(end%60):02d},000"
+                        
+                        srt_content += f"{idx}\n{start_str} --> {end_str}\n{item['text']}\n\n"
+
+                    st.download_button("📜 Download Translated SRT Subtitle", srt_content, file_name="youtube_subtitle.srt", mime="text/plain")
+
+                except Exception as e:
+                    st.error(f"❌ Transcript ဆွဲထုတ်၍ မရပါ (ဗီဒီယိုတွင် Subtitle မပါဝင်ပါ သို့မဟုတ် Link မှားယွင်းနေပါသည်): {e}")
+
+# TAB 2: Text Processing, Voice & SRT
+with tab2:
+    st.subheader("📝 Script to Voiceover")
     input_text = st.text_area("Recap စာသားများ ရိုက်ထည့်ပါ-", height=180, placeholder="Enter script here...")
     
     col1, col2 = st.sidebar.columns(2)
-    target_lang = st.sidebar.selectbox("Target Language", ["my", "en"], format_func=lambda x: "Myanmar" if x == "my" else "English")
+    target_lang = st.sidebar.selectbox("Target Language", ["my", "en"], format_func=lambda x: "Myanmar" if x == "my" else "English", key="tab2_lang")
     voice_engine = st.sidebar.radio("Voice Engine", ["Microsoft AI (Edge-TTS)", "Standard (gTTS)"])
 
-    if st.button("🚀 Process Script", type="primary"):
+    if st.button("🚀 Process Script"):
         if not input_text.strip():
             st.warning("⚠️ စာသား အရင်ရိုက်ထည့်ပါ။")
         else:
             with st.spinner("Processing..."):
-                # Translation
                 translated = GoogleTranslator(source='auto', target=target_lang).translate(input_text)
                 st.subheader("🌐 Translated Text")
                 st.write(translated)
 
-                # Audio Generation
                 audio_file = "output.mp3"
                 if voice_engine == "Microsoft AI (Edge-TTS)":
                     voice = "my-MM-ThihaNeural" if target_lang == "my" else "en-US-ChristopherNeural"
@@ -45,19 +102,3 @@ with tab1:
                 st.audio(audio_file)
                 with open(audio_file, "rb") as f:
                     st.download_button("📥 Download Voiceover (.mp3)", f, file_name="recap_voice.mp3", mime="audio/mp3")
-
-                # SRT Generator
-                srt_content = f"1\n00:00:00,000 --> 00:00:05,000\n{translated}\n"
-                st.download_button("📜 Download Subtitle (.srt)", srt_content, file_name="subtitle.srt", mime="text/plain")
-
-# TAB 2: Transcript Generator
-with tab2:
-    st.subheader("🎙️ Extract Transcript from Audio/Video")
-    uploaded_file = st.file_uploader("Audio သို့မဟုတ် Video ဖိုင် တင်ပါ (mp3, wav, mp4, mkv)", type=["mp3", "wav", "mp4", "mkv"])
-
-    if uploaded_file is not None:
-        st.info("💡 ဖိုင်ရရှိပါပြီ။ Transcript ထုတ်ရန် အောက်ပါခလုတ်ကို နှိပ်ပါ။")
-        if st.button("🔍 Generate Transcript"):
-            st.warning("⚠️ Transcript ထုတ်ပေးသည့် စနစ်ကို စတင်နေပါသည်။ ဖိုင်ဆိုဒ်ပေါ်မူတည်၍ ခဏစောင့်ဆိုင်းပေးပါ။")
-            # Transcript logic display
-            st.success("စာသားထုတ်ယူခြင်း လုပ်ဆောင်ချက် ပြည့်စုံသွားပါပြီ။")
