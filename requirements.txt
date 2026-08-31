@@ -2,5 +2,5 @@ streamlit
 deep-translator
 gTTS
 edge-tts
-openai-whisper
-asyncio
+youtube-transcript-api
+yt-dlp
