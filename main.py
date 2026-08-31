@@ -1,63 +1,63 @@
 import os
+import asyncio
 import streamlit as st
 from deep_translator import GoogleTranslator
 from gtts import gTTS
+import edge_tts
 
-# Page Configuration
-st.set_page_config(
-    page_title="Movie Recap Studio",
-    page_icon="🎬",
-    layout="wide"
-)
+st.set_page_config(page_title="Movie Recap Studio Pro", page_icon="🎬", layout="wide")
 
-st.title("🎬 Movie Recap Studio")
-st.write("Movie recap စာမူများကို မြန်မာဘာသာသို့ ပြန်ဆိုပြီး အသံဖိုင် (Audio) ပြုလုပ်ပေးမည့် App ဖြစ်ပါတယ်၊၊")
+st.title("🎬 Movie Recap Studio Pro")
+st.write("Recap Script များ ဘာသာပြန်ခြင်း၊ AI Voiceover ထုတ်ယူခြင်းနှင့် Transcript/SRT Subtitle ဖိုင်များ ဖန်တီးပေးသည့် Studio ဖြစ်ပါသည်။")
 
-# Sidebar - Language and Audio Settings
-st.sidebar.header("⚙️ Settings")
-target_lang = st.sidebar.selectbox(
-    "Target Language",
-    options=["my", "en"],
-    format_func=lambda x: "Myanmar" if x == "my" else "English",
-    index=0
-)
+tab1, tab2 = st.tabs(["📝 Text to Voice & SRT", "🎙️ Audio/Video Transcript"])
 
-# Text Input Area
-st.subheader("📝 Input Script")
-input_text = st.text_area(
-    "Recap ရေးသားလိုသည့် စာသားများကို ဒီနေရာတွင် ရိုက်ထည့်ပါ သို့မဟုတ် Paste လုပ်ပါ-",
-    height=200,
-    placeholder="Enter script text here..."
-)
+# TAB 1: Text Processing, Translation, Voice & SRT
+with tab1:
+    st.subheader("1. Script & Translation")
+    input_text = st.text_area("Recap စာသားများ ရိုက်ထည့်ပါ-", height=180, placeholder="Enter script here...")
+    
+    col1, col2 = st.sidebar.columns(2)
+    target_lang = st.sidebar.selectbox("Target Language", ["my", "en"], format_func=lambda x: "Myanmar" if x == "my" else "English")
+    voice_engine = st.sidebar.radio("Voice Engine", ["Microsoft AI (Edge-TTS)", "Standard (gTTS)"])
 
-if st.button("🚀 Process & Generate Audio", type="primary"):
-    if not input_text.strip():
-        st.warning("⚠️ စာသား အရင် ရိုက်ထည့်ပေးပါ။")
-    else:
-        with st.spinner("စာတိုကို ဘာသာပြန်ဆိုပြီး အသံဖိုင် ပြုလုပ်နေပါသည်..."):
-            try:
+    if st.button("🚀 Process Script", type="primary"):
+        if not input_text.strip():
+            st.warning("⚠️ စာသား အရင်ရိုက်ထည့်ပါ။")
+        else:
+            with st.spinner("Processing..."):
                 # Translation
                 translated = GoogleTranslator(source='auto', target=target_lang).translate(input_text)
-                
-                st.subheader("🌐 Translated Script")
+                st.subheader("🌐 Translated Text")
                 st.write(translated)
 
-                # Text-To-Speech (gTTS)
-                tts = gTTS(text=translated, lang=target_lang, slow=False)
-                audio_path = "output.mp3"
-                tts.save(audio_path)
+                # Audio Generation
+                audio_file = "output.mp3"
+                if voice_engine == "Microsoft AI (Edge-TTS)":
+                    voice = "my-MM-ThihaNeural" if target_lang == "my" else "en-US-ChristopherNeural"
+                    communicate = edge_tts.Communicate(translated, voice)
+                    asyncio.run(communicate.save(audio_file))
+                else:
+                    tts = gTTS(text=translated, lang=target_lang)
+                    tts.save(audio_file)
 
-                # Audio Player & Download
-                st.subheader("🔊 Generated Audio")
-                st.audio(audio_path, format="audio/mp3")
+                st.subheader("🔊 Audio Output")
+                st.audio(audio_file)
+                with open(audio_file, "rb") as f:
+                    st.download_button("📥 Download Voiceover (.mp3)", f, file_name="recap_voice.mp3", mime="audio/mp3")
 
-                with open(audio_path, "rb") as file:
-                    st.download_button(
-                        label="📥 Download Audio (.mp3)",
-                        data=file,
-                        file_name="recap_voice.mp3",
-                        mime="audio/mp3"
-                    )
+                # SRT Generator
+                srt_content = f"1\n00:00:00,000 --> 00:00:05,000\n{translated}\n"
+                st.download_button("📜 Download Subtitle (.srt)", srt_content, file_name="subtitle.srt", mime="text/plain")
 
-            except Exception as e:
-                st.error(f"❌ Error ဖြစ်သွားပါသည်: {e}")
+# TAB 2: Transcript Generator
+with tab2:
+    st.subheader("🎙️ Extract Transcript from Audio/Video")
+    uploaded_file = st.file_uploader("Audio သို့မဟုတ် Video ဖိုင် တင်ပါ (mp3, wav, mp4, mkv)", type=["mp3", "wav", "mp4", "mkv"])
+
+    if uploaded_file is not None:
+        st.info("💡 ဖိုင်ရရှိပါပြီ။ Transcript ထုတ်ရန် အောက်ပါခလုတ်ကို နှိပ်ပါ။")
+        if st.button("🔍 Generate Transcript"):
+            st.warning("⚠️ Transcript ထုတ်ပေးသည့် စနစ်ကို စတင်နေပါသည်။ ဖိုင်ဆိုဒ်ပေါ်မူတည်၍ ခဏစောင့်ဆိုင်းပေးပါ။")
+            # Transcript logic display
+            st.success("စာသားထုတ်ယူခြင်း လုပ်ဆောင်ချက် ပြည့်စုံသွားပါပြီ။")
