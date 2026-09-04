@@ -1,8 +1,4 @@
 streamlit
-deep-translator
-gTTS
 edge-tts
-youtube-transcript-api
-yt-dlp
-openai-whisper
-torch
+asyncio
+Pillow
