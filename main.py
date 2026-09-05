@@ -1,350 +1,326 @@
 import asyncio
 import io
 import edge_tts
+import google.generativeai as genai
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 import streamlit as st
 
+# Streamlit Page Setup
 st.set_page_config(
-    page_title="Movie Recap All-in-One Suite", page_icon="🎬", layout="wide"
+    page_title="AI Video Creator Hub",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded",
 )
 
-st.title("🎬 Movie Recap All-in-One Automation Suite")
-st.write(
-    "Recap Script မှ Audio/SRT ထုတ်ခြင်း၊ Multi-Image Collage Thumbnails ဖန်တီးခြင်းနှင့်"
-    " Advanced Layered Poster များ ပြုလုပ်နိုင်သည့် Tool"
+# Custom Dark Theme Styling
+st.markdown(
+    """
+    <style>
+    .stApp { background-color: #0d0f17; color: #ffffff; }
+    .tool-card {
+        background-color: #161b26;
+        border: 1px solid #232a3b;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .tool-info { display: flex; align-items: center; gap: 16px; }
+    .tool-icon {
+        width: 44px; height: 44px; border-radius: 10px;
+        display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .tool-title { font-size: 16px; font-weight: 600; color: #ffffff; margin: 0; }
+    .tool-desc { font-size: 12px; color: #8b949e; margin: 2px 0 0 0; }
+    .section-title { font-size: 14px; font-weight: 600; color: #6e7681; margin: 20px 0 10px 0; text-transform: uppercase; }
+    </style>
+""",
+    unsafe_allow_html=True,
 )
 
-# Tab ၃ ခု ခွဲခြားထားခြင်း
-tab1, tab2, tab3 = st.tabs([
-    "🎙️ Voice & Subtitle",
-    "🖼️ Multi-Thumbnail Variations",
-    "🧙‍♂️ Advanced Poster Compositor",
-])
+# Session State for Menu Switching
+if "current_page" not in st.session_state:
+  st.session_state["current_page"] = "🏠 Home Dashboard"
+
+
+def navigate_to(page_name):
+  st.session_state["current_page"] = page_name
+
+
+# Sidebar Menu Navigation
+st.sidebar.title("⚡ Tool Suite")
+selected_tool = st.sidebar.radio(
+    "Select Tool:",
+    [
+        "🏠 Home Dashboard",
+        "⚡ One Click Recap",
+        "🎙️ AI Voice & Generate SRT",
+        "🖼️ Thumbnail Person & Poster",
+        "🌐 Translate Content",
+    ],
+    index=[
+        "🏠 Home Dashboard",
+        "⚡ One Click Recap",
+        "🎙️ AI Voice & Generate SRT",
+        "🖼️ Thumbnail Person & Poster",
+        "🌐 Translate Content",
+    ].index(st.session_state["current_page"]),
+)
+
+# Sync sidebar with session state
+st.session_state["current_page"] = selected_tool
 
 # ==========================================
-# TAB 1: VOICE & SUBTITLE GENERATOR
+# 🏠 HOME DASHBOARD UI
 # ==========================================
-with tab1:
-  st.subheader("🎙️ Voiceover (.mp3) & Subtitle (.srt) Generator")
-  script_text = st.text_area(
-      "Recap Script စာသားများကို ဒီမှာ Paste လုပ်ပါ:", height=200
+if st.session_state["current_page"] == "🏠 Home Dashboard":
+  st.title("Customize Home")
+  st.caption("Select a tool from below or use the sidebar menu to get started.")
+
+  st.markdown(
+      '<div class="section-title">Pinned Tools</div>', unsafe_allow_html=True
   )
 
-  voice_option = st.selectbox(
-      "အသံအမျိုးအစား ရွေးပါ:",
-      [
-          ("မြန်မာ - Nilar (Female)", "my-MM-NilarNeural"),
-          ("မြန်မာ - Thiha (Male)", "my-MM-ThihaNeural"),
-          ("English - Christopher (Male)", "en-US-ChristopherNeural"),
-          ("English - Ava (Female)", "en-US-AvaNeural"),
-      ],
+  # Tool 1: One Click Recap
+  col1, col2 = st.columns([5, 1])
+  with col1:
+    st.markdown(
+        """<div class="tool-card"><div class="tool-info">
+        <div class="tool-icon" style="background-color: #2e1065; color: #a855f7;">⚡</div>
+        <div><p class="tool-title">One Click Recap</p><p class="tool-desc">Instantly recap any movie or video script</p></div>
+        </div></div>""",
+        unsafe_allow_html=True,
+    )
+  with col2:
+    if st.button("Launch", key="h_recap"):
+      navigate_to("⚡ One Click Recap")
+      st.rerun()
+
+  # Tool 2: AI Voice & SRT
+  col1, col2 = st.columns([5, 1])
+  with col1:
+    st.markdown(
+        """<div class="tool-card"><div class="tool-info">
+        <div class="tool-icon" style="background-color: #1e1b4b; color: #6366f1;">🎙️</div>
+        <div><p class="tool-title">AI Voice & Generate SRT</p><p class="tool-desc">Convert script to audio and synced .srt subtitles</p></div>
+        </div></div>""",
+        unsafe_allow_html=True,
+    )
+  with col2:
+    if st.button("Launch", key="h_voice"):
+      navigate_to("🎙️ AI Voice & Generate SRT")
+      st.rerun()
+
+  st.markdown(
+      '<div class="section-title">More Tools</div>', unsafe_allow_html=True
+  )
+
+  # Tool 3: Poster & Thumbnail
+  col1, col2 = st.columns([5, 1])
+  with col1:
+    st.markdown(
+        """<div class="tool-card"><div class="tool-info">
+        <div class="tool-icon" style="background-color: #064e3b; color: #10b981;">🖼️</div>
+        <div><p class="tool-title">Thumbnail Person & Poster</p><p class="tool-desc">Create multi-layer poster compositions and cutouts</p></div>
+        </div></div>""",
+        unsafe_allow_html=True,
+    )
+  with col2:
+    if st.button("Launch", key="h_poster"):
+      navigate_to("🖼️ Thumbnail Person & Poster")
+      st.rerun()
+
+  # Tool 4: Translate Content
+  col1, col2 = st.columns([5, 1])
+  with col1:
+    st.markdown(
+        """<div class="tool-card"><div class="tool-info">
+        <div class="tool-icon" style="background-color: #312e81; color: #818cf8;">🌐</div>
+        <div><p class="tool-title">Translate Content</p><p class="tool-desc">Translate scripts to Burmese or other languages</p></div>
+        </div></div>""",
+        unsafe_allow_html=True,
+    )
+  with col2:
+    if st.button("Launch", key="h_trans"):
+      navigate_to("🌐 Translate Content")
+      st.rerun()
+
+# ==========================================
+# ⚡ ONE CLICK RECAP FUNCTION
+# ==========================================
+elif st.session_state["current_page"] == "⚡ One Click Recap":
+  st.subheader("⚡ One Click Movie/Anime Recap Generator")
+
+  api_key = st.text_input("Gemini API Key ထည့်ပါ:", type="password")
+  raw_story = st.text_area(
+      "ဇာတ်လမ်း အကျဉ်း သို့မဟုတ် Plot Detail များ ထည့်ပါ:", height=200
+  )
+
+  if st.button("🚀 Generate Recap Script"):
+    if api_key and raw_story:
+      try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = (
+            "You are a professional movie recap creator. Write an engaging"
+            " movie recap script in Burmese language based on the following"
+            f" text:\n{raw_story}"
+        )
+
+        with st.spinner("AI Script ရေးသားနေပါသည်..."):
+          response = model.generate_content(prompt)
+          st.success("✨ Script ရရှိပါပြီ!")
+          st.text_area("Generated Recap Script:", response.text, height=250)
+      except Exception as e:
+        st.error(f"Error occurred: {e}")
+    else:
+      st.warning("API Key နှင့် Plot စာသား ဖြည့်သွင်းပေးပါ။")
+
+# ==========================================
+# 🎙️ AI VOICE & SRT GENERATOR FUNCTION
+# ==========================================
+elif st.session_state["current_page"] == "🎙️ AI Voice & Generate SRT":
+  st.subheader("🎙️ AI Voice & SRT Subtitle Generator")
+
+  script_input = st.text_area("Script စာသား ရေးထည့်ပါ:", height=180)
+  voice_choice = st.selectbox(
+      "အသံ ရွေးပါ:",
+      [("မြန်မာ - Nilar (Female)", "my-MM-NilarNeural"), ("မြန်မာ - Thiha (Male)", "my-MM-ThihaNeural")],
       format_func=lambda x: x[0],
   )
 
 
-  def text_to_srt(text):
-    lines = [line.strip() for line in text.split("\n") if line.strip()]
-    srt_content = ""
-    start_time = 0
+  def make_srt(text):
+    lines = [l.strip() for l in text.split("\n") if l.strip()]
+    srt = ""
+    t = 0
     for i, line in enumerate(lines, 1):
-      duration = max(2, len(line) * 0.25)
-      end_time = start_time + duration
+      dur = max(2, len(line) * 0.25)
+      end = t + dur
 
-      def format_time(seconds):
-        hrs = int(seconds // 3600)
-        mins = int((seconds % 3600) // 60)
-        secs = int(seconds % 60)
-        msecs = int((seconds - int(seconds)) * 1000)
-        return f"{hrs:02d}:{mins:02d}:{secs:02d},{msecs:03d}"
-
-      srt_content += (
-          f"{i}\n{format_time(start_time)} -->"
-          f" {format_time(end_time)}\n{line}\n\n"
-      )
-      start_time = end_time
-    return srt_content
-
-
-  async def generate_audio_file(text, voice_code):
-    communicate = edge_tts.Communicate(text, voice_code)
-    await communicate.save("output_voice.mp3")
-
-
-  if st.button("🚀 Audio နှင့် SRT ထုတ်ယူမည်"):
-    if script_text.strip():
-      with st.spinner("Audio နှင့် Subtitle ဖန်တီးနေပါသည်..."):
-        asyncio.run(generate_audio_file(script_text, voice_option[1]))
-        srt_data = text_to_srt(script_text)
-
-        st.success("✨ အောင်မြင်စွာ ဖန်တီးပြီးပါပြီ!")
-
-        audio_file = open("output_voice.mp3", "rb")
-        audio_bytes = audio_file.read()
-        st.audio(audio_bytes, format="audio/mp3")
-
-        col1, col2 = st.columns(2)
-        with col1:
-          st.download_button(
-              "📥 Download Audio (.mp3)",
-              data=audio_bytes,
-              file_name="recap_voice.mp3",
-              mime="audio/mp3",
-          )
-        with col2:
-          st.download_button(
-              "📥 Download Subtitle (.srt)",
-              data=srt_data,
-              file_name="recap_subtitles.srt",
-              mime="text/plain",
-          )
-    else:
-      st.error("Script စာသား ထည့်ပေးပါ။")
-
-# ==========================================
-# TAB 2: MULTI-IMAGE THUMBNAIL VARIATIONS
-# ==========================================
-with tab2:
-  st.subheader("🖼️ Collage Thumbnail Generator (၄ မျိုး)")
-
-  uploaded_files = st.file_uploader(
-      "Movie Scene ပုံများ (၂ ပုံမှ ၄ ပုံအထိ ရွေးပေးပါ):",
-      type=["jpg", "jpeg", "png"],
-      accept_multiple_files=True,
-  )
-
-  title_text = st.text_input(
-      "ခေါင်းစဉ် စာသား (Hook Title):", "ဒီဇာတ်လမ်းက တကယ်ရူးသွပ်စရာပဲ!"
-  )
-  badge_text = st.text_input("အပေါ်တန်း စာသား (Badge Text):", "MOVIE RECAP")
-  format_type = st.radio(
-      "Format ရွေးပါ:",
-      ["TikTok / Reels (9:16)", "YouTube (16:9)"],
-      horizontal=True,
-  )
-
-
-  def crop_fit(img, target_w, target_h):
-    w, h = img.size
-    target_ratio = target_w / target_h
-    img_ratio = w / h
-    if img_ratio > target_ratio:
-      new_w = int(h * target_ratio)
-      left = (w - new_w) // 2
-      img_cropped = img.crop((left, 0, left + new_w, h))
-    else:
-      new_h = int(w / target_ratio)
-      top = (h - new_h) // 2
-      img_cropped = img.crop((0, top, w, top + new_h))
-    return img_cropped.resize((target_w, target_h))
-
-
-  def generate_style_1(images, title, badge, width, height, is_vert):
-    canvas = Image.new("RGBA", (width, height), (15, 15, 20, 255))
-    num = len(images)
-    if is_vert:
-      sh = height // num
-      for idx, img in enumerate(images):
-        canvas.paste(crop_fit(img, width, sh), (0, idx * sh))
-    else:
-      sw = width // num
-      for idx, img in enumerate(images):
-        canvas.paste(crop_fit(img, sw, height), (idx * sw, 0))
-
-    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    d_overlay = ImageDraw.Draw(overlay)
-    for y in range(int(height * 0.5), height):
-      alpha = int(220 * ((y - height * 0.5) / (height * 0.5)))
-      d_overlay.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
-
-    canvas = Image.alpha_composite(canvas, overlay)
-    draw = ImageDraw.Draw(canvas)
-    b_top = int(height * 0.72)
-    draw.rectangle(
-        [(40, b_top), (width - 40, b_top + 220)], fill=(230, 25, 50, 220)
-    )
-    font = ImageFont.load_default()
-    draw.text((60, b_top + 40), title, fill=(255, 255, 255), font=font)
-    draw.text((60, 40), f"[{badge}]", fill=(255, 215, 0), font=font)
-    return canvas
-
-
-  def generate_style_2(images, title, badge, width, height, is_vert):
-    canvas = Image.new("RGBA", (width, height), (15, 15, 20, 255))
-    hero = crop_fit(images[0], width, height)
-    canvas.paste(hero, (0, 0))
-
-    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    d_overlay = ImageDraw.Draw(overlay)
-    for y in range(int(height * 0.35), height):
-      alpha = int(230 * ((y - height * 0.35) / (height * 0.65)))
-      d_overlay.line([(0, y), (width, y)], fill=(0, 0, 0, alpha))
-    canvas = Image.alpha_composite(canvas, overlay)
-
-    if len(images) > 1:
-      sub_imgs = images[1:]
-      c_w = (width - 100) // len(sub_imgs)
-      c_h = int(height * 0.18) if is_vert else int(height * 0.28)
-      card_y = int(height * 0.52) if is_vert else int(height * 0.45)
-
-      for idx, s_img in enumerate(sub_imgs):
-        x_pos = 40 + idx * (c_w + 10)
-        card = crop_fit(s_img, c_w, c_h)
-        canvas.paste(card, (x_pos, card_y))
-
-    draw = ImageDraw.Draw(canvas)
-    b_top = int(height * 0.75)
-    draw.rectangle(
-        [(40, b_top), (width - 40, b_top + 180)], fill=(0, 120, 235, 230)
-    )
-    font = ImageFont.load_default()
-    draw.text((60, b_top + 30), title, fill=(255, 255, 255), font=font)
-    draw.text((60, 40), f"[{badge}]", fill=(255, 215, 0), font=font)
-    return canvas
-
-
-  if st.button("🎨 Thumbnail ဒီဇိုင်းများ ဖန်တီးမည်"):
-    if uploaded_files:
-      imgs = [Image.open(f).convert("RGBA") for f in uploaded_files[:4]]
-      is_vert = "9:16" in format_type
-      w, h = (1080, 1920) if is_vert else (1280, 720)
-
-      res1 = generate_style_1(imgs, title_text, badge_text, w, h, is_vert)
-      res2 = generate_style_2(imgs, title_text, badge_text, w, h, is_vert)
-
-      col_a, col_b = st.columns(2)
-      with col_a:
-        st.markdown("#### ဒီဇိုင်း ၁ - Classic Split Grid")
-        buf1 = io.BytesIO()
-        res1.convert("RGB").save(buf1, format="JPEG", quality=95)
-        st.image(buf1.getvalue(), use_container_width=True)
-        st.download_button(
-            "📥 Download Style 1",
-            data=buf1.getvalue(),
-            file_name="thumbnail_v1.jpg",
-            mime="image/jpeg",
+      def fmt(s):
+        h, m, sec, ms = (
+            int(s // 3600),
+            int((s % 3600) // 60),
+            int(s % 60),
+            int((s - int(s)) * 1000),
         )
+        return f"{h:02d}:{m:02d}:{sec:02d},{ms:03d}"
 
-      with col_b:
-        st.markdown("#### ဒီဇိုင်း ၂ - Hero Main + Sub Cards")
-        buf2 = io.BytesIO()
-        res2.convert("RGB").save(buf2, format="JPEG", quality=95)
-        st.image(buf2.getvalue(), use_container_width=True)
-        st.download_button(
-            "📥 Download Style 2",
-            data=buf2.getvalue(),
-            file_name="thumbnail_v2.jpg",
-            mime="image/jpeg",
+      srt += f"{i}\n{fmt(t)} --> {fmt(end)}\n{line}\n\n"
+      t = end
+    return srt
+
+
+  async def generate_speech(text, v_code):
+    comm = edge_tts.Communicate(text, v_code)
+    await comm.save("voice.mp3")
+
+
+  if st.button("🚀 Audio & SRT ထုတ်ယူမည်"):
+    if script_input.strip():
+      with st.spinner("ဖန်တီးနေပါသည်..."):
+        asyncio.run(generate_speech(script_input, voice_choice[1]))
+        srt_data = make_srt(script_input)
+
+        with open("voice.mp3", "rb") as f:
+          audio_data = f.read()
+
+        st.audio(audio_data, format="audio/mp3")
+
+        c1, c2 = st.columns(2)
+        c1.download_button(
+            "📥 Download Audio (.mp3)",
+            audio_data,
+            "recap_audio.mp3",
+            "audio/mp3",
+        )
+        c2.download_button(
+            "📥 Download Subtitle (.srt)", srt_data, "subtitles.srt", "text/plain"
         )
     else:
-      st.error("ကျေးဇူးပြု၍ Movie Scene ပုံများ တင်ပေးပါ။")
+      st.warning("Script ထည့်ပေးပါ။")
 
 # ==========================================
-# TAB 3: ADVANCED POSTER COMPOSITOR (LAYERED)
+# 🖼️ THUMBNAIL PERSON & POSTER COMPOSITOR
 # ==========================================
-with tab3:
-  st.subheader("🧙‍♂️ Advanced Poster Compositor (Multi-Layer Cutouts)")
-  st.write(
-      "Background, Hero Character, Item (Magic Jar) နှင့် Text Banner များကို"
-      " Layer အလိုက် စီစဉ်ပေးနိုင်သော Tool"
-  )
+elif st.session_state["current_page"] == "🖼️ Thumbnail Person & Poster":
+  st.subheader("🖼️ Multi-layer Poster & Concept Art Compositor")
 
-  col_ctrl, col_prev = st.columns([1, 2])
+  col_inputs, col_preview = st.columns([1, 2])
 
-  with col_ctrl:
-    bg_f = st.file_uploader(
-        "၁။ Background Image", type=["jpg", "png"], key="p_bg"
+  with col_inputs:
+    bg_img = st.file_uploader("1. Background Image", type=["jpg", "png"])
+    hero_img = st.file_uploader(
+        "2. Hero Person PNG (Transparent)", type=["png"]
     )
-    side_f = st.file_uploader(
-        "၂။ Side Characters PNG (Transparent)", type=["png"], key="p_side"
-    )
-    hero_f = st.file_uploader(
-        "၃။ Main Hero PNG (Transparent)", type=["png"], key="p_hero"
-    )
-    item_f = st.file_uploader(
-        "၄။ Magic Item / Jar PNG", type=["png"], key="p_item"
-    )
+    item_img = st.file_uploader("3. Magic Item/Jar PNG", type=["png"])
 
-    p_title = st.text_input("Main Title", "MAGIC JAR SHOP")
-    p_sub = st.text_input("Subtitle", "100,000 GOLD SOUL COINS")
-    p_badge = st.text_input("Badge Text", "x10 LUCKY JAR")
+    p_title = st.text_input("Title Text", "MAGIC JAR SHOP")
+    h_x = st.slider("Hero Position X", 0, 1000, 350)
+    h_y = st.slider("Hero Position Y", 0, 1000, 100)
+    h_scale = st.slider("Hero Scale (%)", 20, 200, 100)
 
-    hero_x = st.slider("Hero Position X", 0, 1000, 350)
-    hero_y = st.slider("Hero Position Y", 0, 1000, 100)
-    hero_scale = st.slider("Hero Scale (%)", 20, 200, 100)
-
-    item_x = st.slider("Item Position X", 0, 1000, 450)
-    item_y = st.slider("Item Position Y", 0, 1000, 400)
-    item_scale = st.slider("Item Scale (%)", 10, 150, 60)
-
-
-  def generate_layered_poster():
+  def draw_poster():
     cw, ch = 1280, 720
-    if bg_f:
-      canvas = Image.open(bg_f).convert("RGBA").resize((cw, ch))
-    else:
-      canvas = Image.new("RGBA", (cw, ch), (20, 10, 35, 255))
+    canvas = (
+        Image.open(bg_img).convert("RGBA").resize((cw, ch))
+        if bg_img
+        else Image.new("RGBA", (cw, ch), (20, 10, 35, 255))
+    )
 
-    # Side characters
-    if side_f:
-      s_img = Image.open(side_f).convert("RGBA").resize((cw, ch))
-      canvas.paste(s_img, (0, 0), s_img)
+    if hero_img:
+      h_pic = Image.open(hero_img).convert("RGBA")
+      ow, oh = h_pic.size
+      nw, nh = int(ow * (h_scale / 100.0)), int(oh * (h_scale / 100.0))
+      canvas.paste(
+          h_pic.resize((nw, nh)), (h_x, h_y), h_pic.resize((nw, nh))
+      )
 
-    # Hero character
-    if hero_f:
-      h_img = Image.open(hero_f).convert("RGBA")
-      ow, oh = h_img.size
-      nw, nh = int(ow * (hero_scale / 100.0)), int(oh * (hero_scale / 100.0))
-      canvas.paste(h_img.resize((nw, nh)), (hero_x, hero_y), h_img.resize((nw, nh)))
-
-    # Item with Glow Effect
-    if item_f:
-      i_img = Image.open(item_f).convert("RGBA")
-      ow, oh = i_img.size
-      nw, nh = int(ow * (item_scale / 100.0)), int(oh * (item_scale / 100.0))
-      resized_item = i_img.resize((nw, nh))
-
-      glow = resized_item.filter(ImageFilter.GaussianBlur(12))
-      glow = ImageEnhance.Brightness(glow).enhance(2.0)
-
-      canvas.paste(glow, (item_x - 5, item_y - 5), glow)
-      canvas.paste(resized_item, (item_x, item_y), resized_item)
-
-    # Text Banner
     draw = ImageDraw.Draw(canvas)
     draw.rectangle(
-        [(50, 40), (520, 140)],
+        [(50, 40), (500, 120)],
         fill=(15, 10, 25, 220),
         outline=(212, 175, 55),
         width=3,
     )
-
-    font = ImageFont.load_default()
-    draw.text((70, 55), p_title, fill=(255, 215, 0), font=font)
-    draw.text((70, 90), p_sub, fill=(255, 255, 255), font=font)
-
-    # Item Badge
-    draw.rectangle(
-        [(item_x, item_y + 120), (item_x + 140, item_y + 155)],
-        fill=(200, 30, 30, 230),
-        outline=(255, 255, 255),
-        width=2,
-    )
-    draw.text((item_x + 10, item_y + 130), p_badge, fill=(255, 255, 255), font=font)
-
+    draw.text((70, 60), p_title, fill=(255, 215, 0))
     return canvas
 
+  with col_preview:
+    poster = draw_poster()
+    buf = io.BytesIO()
+    poster.convert("RGB").save(buf, format="JPEG", quality=95)
+    st.image(buf.getvalue(), use_container_width=True)
+    st.download_button("📥 Download Poster", buf.getvalue(), "poster.jpg", "image/jpeg")
 
-  with col_prev:
-    st.markdown("#### Live Poster Preview")
-    poster_result = generate_layered_poster()
+# ==========================================
+# 🌐 TRANSLATE CONTENT FUNCTION
+# ==========================================
+elif st.session_state["current_page"] == "🌐 Translate Content":
+  st.subheader("🌐 Translate Content")
 
-    buf_p = io.BytesIO()
-    poster_result.convert("RGB").save(buf_p, format="JPEG", quality=95)
-    st.image(buf_p.getvalue(), use_container_width=True)
+  api_key_t = st.text_input("Gemini API Key:", type="password")
+  src_text = st.text_area("ဘာသာပြန်လိုသော စာသားများ ရေးထည့်ပါ:", height=180)
+  target_lang = st.selectbox(
+      "ပြန်ဆိုချင်သည့် ဘာသာစကား:", ["Burmese (မြန်မာ)", "English"]
+  )
 
-    st.download_button(
-        "📥 Download Layered Poster (.jpg)",
-        data=buf_p.getvalue(),
-        file_name="concept_poster.jpg",
-        mime="image/jpeg",
-    )
+  if st.button("🚀 Translate Text"):
+    if api_key_t and src_text:
+      try:
+        genai.configure(api_key=api_key_t)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        prompt = f"Translate the following content into {target_lang}:\n\n{src_text}"
+
+        with st.spinner("Translating..."):
+          res = model.generate_content(prompt)
+          st.success("Translated Output:")
+          st.text_area("Result:", res.text, height=200)
+      except Exception as e:
+        st.error(f"Error: {e}")
+    else:
+      st.warning("API Key နှင့် စာသား ရေးပေးပါ။")
